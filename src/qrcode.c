@@ -526,21 +526,28 @@ static uint32_t getPenaltyScore(BitBucket *modules) {
     }
     
     uint16_t black = 0;
-    for (uint8_t y = 0; y < size; y++) {
-        uint16_t bitsRow = 0, bitsCol = 0;
-        for (uint8_t x = 0; x < size; x++) {
-            bool color = bb_getBit(modules, x, y);
+	for (uint8_t y = 0; y < size; y++) {
+		uint16_t bitsRow = 0, bitsCol = 0;
+		for (uint8_t x = 0; x < size; x++) {
+			bool color = bb_getBit(modules, x, y);
 
-            // 2*2 blocks of modules having same color
-            if (x > 0 && y > 0) {
-                bool colorUL = bb_getBit(modules, x - 1, y - 1);
-                bool colorUR = bb_getBit(modules, x, y - 1);
-                bool colorL = bb_getBit(modules, x - 1, y);
-                if (color == colorUL && color == colorUR && color == colorL) {
-                    result += PENALTY_N2;
-                }
-            }
+			// 2*2 blocks of modules having same color
+			if (x > 0 && y > 0) {
+				bool colorUL = bb_getBit(modules, x - 1, y - 1);
+				bool colorUR = bb_getBit(modules, x, y - 1);
+				bool colorL = bb_getBit(modules, x - 1, y);
+				if (color == colorUL && color == colorUR && color == colorL) {
+					result += PENALTY_N2;
+				}
+			}
+		}
+	}
 
+	uint16_t black = 0;
+	for (uint8_t y = 0; y < size; y++) {
+		uint16_t bitsRow = 0, bitsCol = 0;
+		for (uint8_t x = 0; x < size; x++) {
+			bool color = bb_getBit(modules, x, y);
             // Finder-like pattern in rows and columns
             bitsRow = ((bitsRow << 1) & 0x7FF) | color;
             bitsCol = ((bitsCol << 1) & 0x7FF) | bb_getBit(modules, y, x);
