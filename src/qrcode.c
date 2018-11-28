@@ -480,12 +480,15 @@ static void drawCodewords(BitBucket *modules, BitBucket *isFunction, BitBucket *
 // Calculates and returns the penalty score based on state of this QR Code's current modules.
 // This is used by the automatic mask choice algorithm to find the mask pattern that yields the lowest score.
 // @TODO: This can be optimized by working with the bytes instead of bits.
+
 static uint32_t getPenaltyScore(BitBucket *modules) {
     uint32_t result = 0;
     
     uint8_t size = modules->bitOffsetOrWidth;
     
     // Adjacent modules in row having same color
+	/*픽셀 중에서 행(가로방향)으로 5개이상 연속되어 같은 색인 경우 패널티 값 +3
+	  5개 연속된 픽셀들 옆에 같은 색이 존재하는 경우 한 픽셀당 패널티 값 +1*/
     for (uint8_t y = 0; y < size; y++) {
         
         bool colorX = bb_getBit(modules, 0, y);
@@ -506,6 +509,8 @@ static uint32_t getPenaltyScore(BitBucket *modules) {
         }
     }
     
+	/*픽셀 중에서 열(세로방향)으로 5개이상 연속되어 같은 색인 경우 패널티 값 +3
+	  5개 연속된 픽셀들 옆에 같은 색이 존재하는 경우 한 픽셀당 패널티 값 +1*/
     // Adjacent modules in column having same color
     for (uint8_t x = 0; x < size; x++) {
         bool colorY = bb_getBit(modules, x, 0);
@@ -525,27 +530,37 @@ static uint32_t getPenaltyScore(BitBucket *modules) {
         }
     }
     
+	//각 2x2 블록에 대해 패턴 확인
     uint16_t black = 0;
-    for (uint8_t y = 0; y < size; y++) {
-        uint16_t bitsRow = 0, bitsCol = 0;
-        for (uint8_t x = 0; x < size; x++) {
-            bool color = bb_getBit(modules, x, y);
+	for (uint8_t y = 0; y < size; y++) {
+		uint16_t bitsRow = 0, bitsCol = 0;
+		for (uint8_t x = 0; x < size; x++) {
+			bool color = bb_getBit(modules, x, y);
 
-            // 2*2 blocks of modules having same color
-            if (x > 0 && y > 0) {
-                bool colorUL = bb_getBit(modules, x - 1, y - 1);
-                bool colorUR = bb_getBit(modules, x, y - 1);
-                bool colorL = bb_getBit(modules, x - 1, y);
-                if (color == colorUL && color == colorUR && color == colorL) {
-                    result += PENALTY_N2;
-                }
-            }
+			// 2*2 blocks of modules having same color
+			if (x > 0 && y > 0) {
+				bool colorUL = bb_getBit(modules, x - 1, y - 1);
+				bool colorUR = bb_getBit(modules, x, y - 1);
+				bool colorL = bb_getBit(modules, x - 1, y);
+				if (color == colorUL && color == colorUR && color == colorL) {
+					result += PENALTY_N2;
+				}
+			}
+		}
+	}
 
+	uint16_t black = 0;
+	for (uint8_t y = 0; y < size; y++) {
+		uint16_t bitsRow = 0, bitsCol = 0;
+		for (uint8_t x = 0; x < size; x++) {
+			bool color = bb_getBit(modules, x, y);
             // Finder-like pattern in rows and columns
+			//양쪽 또는 한쪽에 4개의 밝은 픽셀을 가지고 있는 dark-light-dark-dark-dark-light-dark 패턴 생성
             bitsRow = ((bitsRow << 1) & 0x7FF) | color;
             bitsCol = ((bitsCol << 1) & 0x7FF) | bb_getBit(modules, y, x);
 
             // Needs 11 bits accumulated
+			//qr code에서 위의 패턴이 있으면 패널티 값 +40
             if (x >= 10) {
                 if (bitsRow == 0x05D || bitsRow == 0x5D0) {
                     result += PENALTY_N3;
