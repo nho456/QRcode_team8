@@ -814,36 +814,36 @@ int8_t qrcode_initBytes(QRCode *qrcode, uint8_t *modules, uint8_t version, uint8
     BitBucket modulesGrid;
     bb_initGrid(&modulesGrid, modules, size);
     
-    BitBucket isFuncGrid; //isFunctionGrid -> isFuncGrid
-    uint8_t isFuncGridBytes[bb_getGridSizeBytes(size)];
-    bb_initGrid(&isFuncGrid, isFuncGridBytes, size);
+    BitBucket isFunctionGrid;
+    uint8_t isFunctionGridBytes[bb_getGridSizeBytes(size)];
+    bb_initGrid(&isFunctionGrid, isFunctionGridBytes, size);
     
     // Draw function patterns, draw all codewords, do masking
-    drawFunctionPatterns(&modulesGrid, &isFuncGrid, version, eccFormatBits);
+    drawFunctionPatterns(&modulesGrid, &isFunctionGrid, version, eccFormatBits);
     performErrorCorrection(version, eccFormatBits, &codewords);
-    drawCodewords(&modulesGrid, &isFuncGrid, &codewords);
+    drawCodewords(&modulesGrid, &isFunctionGrid, &codewords);
     
     // Find the best (lowest penalty) mask
     uint8_t mask = 0;
     int32_t minPenalty = INT32_MAX;
     for (uint8_t i = 0; i < 8; i++) {
-        drawFormatBits(&modulesGrid, &isFuncGrid, eccFormatBits, i);
-        applyMask(&modulesGrid, &isFuncGrid, i);
+        drawFormatBits(&modulesGrid, &isFunctionGrid, eccFormatBits, i);
+        applyMask(&modulesGrid, &isFunctionGrid, i);
         int penalty = getPenaltyScore(&modulesGrid);
         if (penalty < minPenalty) {
             mask = i;
             minPenalty = penalty;
         }
-        applyMask(&modulesGrid, &isFuncGrid, i);  // Undoes the mask due to XOR
+        applyMask(&modulesGrid, &isFunctionGrid, i);  // Undoes the mask due to XOR
     }
     
     qrcode->mask = mask;
     
     // Overwrite old format bits
-    drawFormatBits(&modulesGrid, &isFuncGrid, eccFormatBits, mask);
+    drawFormatBits(&modulesGrid, &isFunctionGrid, eccFormatBits, mask);
     
     // Apply the final choice of mask
-    applyMask(&modulesGrid, &isFuncGrid, mask);
+    applyMask(&modulesGrid, &isFunctionGrid, mask);
 
     return 0;
 }
@@ -858,10 +858,7 @@ bool qrcode_getModule(QRCode *qrcode, uint8_t x, uint8_t y) {
     }
 
     uint32_t offset = y * qrcode->size + x;
-    bool resultReturn = (qrcode->modules[offset >> 3] & (1 << (7 - (offset & 0x07)))) != 0;
-    
-    //return (qrcode->modules[offset >> 3] & (1 << (7 - (offset & 0x07)))) != 0;
-    return resultReturn;
+    return (qrcode->modules[offset >> 3] & (1 << (7 - (offset & 0x07)))) != 0;
 }
 
 /*
